@@ -1,0 +1,127 @@
+;; -*- lexical-binding: t -*-
+
+;; Package managers
+
+(require 'package)
+(add-to-list 'package-archives
+    '(("marmalade" . "http://marmalade-repo.org/packages/")
+    ("melpa" . "http://melpa.org/packages/")))
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
+
+;; Requires
+
+(package-initialize)
+(require 'evil)
+(evil-mode 1)
+(require 'key-chord)
+(key-chord-mode 1)
+
+;; Undo Tree Mode
+
+(global-undo-tree-mode 1)
+
+;; Keybindings global
+
+(global-set-key (kbd "C-o") 'other-window)
+(global-set-key (kbd "C-x C-a") 'abbrev-mode)
+(global-set-key (kbd "C-c a") 'org-agenda)
+(global-set-key (kbd "C-c c") 'org-capture)
+
+;; Org mode preferences
+
+(setq org-hide-leading-stars t)
+(setq org-hide-emphasis-markers t)
+(setq org-startup-with-inline-images t)
+
+(add-hook 'org-mode-hook
+	  (lambda ()
+	    (setq visual-line-mode t)
+	    ))
+
+(define-key evil-normal-state-map (kbd "C-i") 'org-cycle)
+(setq org-todo-keywords
+      '((sequence "TODO(t)")
+       (sequence "STARTED(s)" "HALFWAY(h)" "FINALIZING(f)" "|" "DONE(d)")
+       (sequence "|" "CANCELED(c)")))
+(setq org-todo-keyword-faces
+      '(("STARTED" . "orange") ("HALFWAY" . "yellow")
+	("CANCELED" . (:foreground "gray" :weight bold)) ("FINALIZING" .
+							  "deep sky blue")))     
+;; evil-mode config
+
+(setq undo-tree-mode nil)
+(defun my-move-key (keymap-from keymap-to key)
+     "Moves key binding from one keymap to another, deleting from the old location. "
+     (define-key keymap-to key (lookup-key keymap-from key))
+     (define-key keymap-from key nil))
+(my-move-key evil-motion-state-map evil-normal-state-map " ")
+
+(defun make-conditional-key-translation (key-from key-to translate-keys-p)
+     "Make a Key Translation such that if the translate-keys-p function returns true,
+   key-from translates to key-to, else key-from translates to itself.  translate-keys-p
+   takes key-from as an argument. "
+     (define-key key-translation-map key-from
+       (lambda (prompt)
+         (if (funcall translate-keys-p key-from) key-to key-from))))
+   (defun my-translate-keys-p (key-from)
+     "Returns whether conditional key translations should be active.  See make-conditional-key-translation function. "
+     (and
+       ;; Only allow a non identity translation if we're beginning a Key Sequence.
+       (equal key-from (this-command-keys))
+       (or (evil-motion-state-p) (evil-normal-state-p) (evil-visual-state-p))))
+   (define-key evil-normal-state-map "c" nil)
+   (define-key evil-motion-state-map " u" 'universal-argument)
+   (define-key evil-normal-state-map " " nil)
+   (define-key evil-motion-state-map "cu" 'universal-argument)
+   (make-conditional-key-translation (kbd "g") (kbd "C-x") 'my-translate-keys-p)
+   (make-conditional-key-translation (kbd "cc") (kbd "C-c") 'my-translate-keys-p)
+   (make-conditional-key-translation " '" (kbd "C-'") 'my-translate-keys-p)
+   (make-conditional-key-translation " h" (kbd "0") 'my-translate-keys-p)
+   (make-conditional-key-translation " l" (kbd "$") 'my-translate-keys-p)
+
+;; key-chord mappings
+
+(key-chord-define evil-normal-state-map ",," 'evil-force-normal-state)
+(key-chord-define evil-visual-state-map ",," 'evil-change-to-previous)
+(key-chord-define evil-insert-state-map ",," 'evil-normal-state)
+(key-chord-define evil-replace-state-map ",," 'evil-normal-state)
+
+;; My Evil Keymaps
+
+(define-key evil-normal-state-map " j" (lambda() (interactive) (evil-next-line 8)))
+(define-key evil-normal-state-map " k" (lambda() (interactive) (evil-previous-line 8)))
+(define-key evil-normal-state-map " f" (lambda() (interactive) (find-file "/home/joe/.emacs.d/init.el")))
+(define-key evil-normal-state-map " d" (lambda() (interactive) (find-file "/home/joe/Documents/nano.org")))
+(define-key evil-normal-state-map (kbd "U") 'undo-tree-redo)
+(define-key evil-normal-state-map (kbd "ce") 'eval-buffer)
+(define-key evil-normal-state-map (kbd "cj") 'outline-next-visible-heading)
+(define-key evil-normal-state-map (kbd "ck") 'outline-previous-visible-heading)
+(define-key evil-normal-state-map (kbd "ch") 'org-backward-heading-same-level)
+(define-key evil-normal-state-map (kbd "cl") 'org-forward-heading-same-level)
+(define-key evil-normal-state-map (kbd "ci") 'outline-up-heading)
+
+;; Emacs auto config
+
+(put 'scroll-left 'disabled nil)
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-enabled-themes (quote (wombat)))
+ '(font-use-system-font t)
+ '(inhibit-startup-screen t)
+ '(initial-buffer-choice "/home/joe/Documents/nano.org")
+ '(org-agenda-files (quote ("/home/joe/Documents/nano.org")))
+ '(tool-bar-mode nil)
+ '(word-wrap t))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(default ((t (:family "Ubuntu Mono" :foundry "DAMA" :slant normal :weight normal :height 128 :width normal))))
+ '(org-level-1 ((t (:inherit outline-1 :foreground "SteelBlue1" :weight bold))))
+ '(org-level-2 ((t (:inherit outline-2 :foreground "IndianRed1" :weight semi-bold)))))
